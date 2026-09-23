@@ -1,0 +1,35 @@
+{
+    "name": "@qemam/eslint-plugin-doc-dod",
+    "version": "0.1.0",
+    "description": "ESLint rules enforcing the org-wide TSDoc Documentation DoD (summary, @example, @accessibility, and @Input/@Output descriptions) on Angular components, services, directives, and pipes.",
+    "main": "lib/index.js",
+    "files": [
+        "lib"
+    ],
+    "scripts": {
+        "test": "node --test test/",
+        "lint:fixture": "cd test-fixture && npx eslint . --no-config-lookup --config eslint.config.js"
+    },
+    "keywords": [
+        "eslint",
+        "eslintplugin",
+        "angular",
+        "tsdoc",
+        "jsdoc",
+        "documentation"
+    ],
+    "peerDependencies": {
+        "eslint": ">=9",
+        "eslint-plugin-jsdoc": ">=50"
+    },
+    "devDependencies": {
+        "eslint": "^9.39.5",
+        "eslint-plugin-jsdoc": "^64.5.4",
+        "typescript-eslint": "^8.70.1"
+    },
+    "publishConfig": {
+        "registry": "REPLACE_WITH_YOUR_ORG_NPM_FEED_URL"
+    },
+    "license": "UNLICENSED",
+    "private": false
+}
