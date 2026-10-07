@@ -4,7 +4,7 @@ const assert = require('node:assert');
 const { Linter } = require('eslint');
 const tseslint = require('typescript-eslint');
 const jsdoc = require('eslint-plugin-jsdoc');
-const docDod = require('..');
+const codeDocs = require('..');
 
 const linter = new Linter();
 
@@ -17,8 +17,8 @@ function Output(..._a) { return (..._b) => {}; }
 function lint(code, ruleOptions) {
   const messages = linter.verify(code, {
     languageOptions: { parser: tseslint.parser },
-    plugins: { jsdoc, 'doc-dod': docDod },
-    rules: docDod.buildRules(ruleOptions),
+    plugins: { jsdoc, 'automated-code-docs': codeDocs },
+    rules: codeDocs.buildRules(ruleOptions),
   });
   return messages.map(m => m.ruleId);
 }
@@ -57,7 +57,7 @@ test('an undocumented @Component with @Input/@Output flags the class once and ea
   // absent (only when a comment exists but lacks that specific piece) — this asserts
   // that documented behavior stays stable across eslint-plugin-jsdoc upgrades.
   assert.deepStrictEqual(ruleIds.sort(), [
-    'doc-dod/require-accessibility-tag',
+    'automated-code-docs/require-accessibility-tag',
     'jsdoc/require-jsdoc', // class
     'jsdoc/require-jsdoc', // @Input
     'jsdoc/require-jsdoc', // @Output
@@ -74,7 +74,7 @@ test('a class with a comment but no @accessibility tag is flagged only for that'
     @Component({})
     class Widget {}
   `);
-  assert.deepStrictEqual(ruleIds, ['doc-dod/require-accessibility-tag']);
+  assert.deepStrictEqual(ruleIds, ['automated-code-docs/require-accessibility-tag']);
 });
 
 test('a fully documented component is silent', () => {
@@ -111,8 +111,8 @@ test('the `severity` option escalates to error', () => {
     `${DECORATOR_STUBS}\n@Component({})\nclass Widget {}`,
     {
       languageOptions: { parser: tseslint.parser },
-      plugins: { jsdoc, 'doc-dod': docDod },
-      rules: docDod.buildRules({ severity: 'error' }),
+      plugins: { jsdoc, 'automated-code-docs': codeDocs },
+      rules: codeDocs.buildRules({ severity: 'error' }),
     }
   );
   assert.ok(messages.length > 0);

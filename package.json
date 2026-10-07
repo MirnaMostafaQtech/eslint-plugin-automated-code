@@ -1,7 +1,7 @@
 {
-    "name": "@qemam/eslint-plugin-doc-dod",
+    "name": "@qemam/eslint-plugin-automated-code-docs",
     "version": "0.1.0",
-    "description": "ESLint rules enforcing the org-wide TSDoc Documentation DoD (summary, @example, @accessibility, and @Input/@Output descriptions) on Angular components, services, directives, and pipes.",
+    "description": "ESLint rules enforcing the org-wide Automated Code Documentation standard (summary, @example, @accessibility, and @Input/@Output descriptions) on Angular components, services, directives, and pipes.",
     "main": "lib/index.js",
     "files": [
         "lib"
