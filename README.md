@@ -31,3 +31,5 @@ If the package is already installed, run only the setup with
 Everything else (the standard, `eslint.config.js` setup, `buildRules()` options, signal inputs,
 publishing, running the tests, and the .NET equivalent) is in one place: the
 [Automated Code Documentation — Implementation Guide](docs/implementation-guide.md).
+
+A short overview of the plugin and its features, in Arabic: [docs/overview-ar.md](docs/overview-ar.md).
