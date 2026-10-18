@@ -45,7 +45,6 @@ function ngAdd(options = {}) {
 
     logger.info('');
     logger.info('Next: run "npm run lint" and record the documentation warning count as this repo\'s baseline.');
-    logger.info('Do not run "eslint --fix" to clear the warnings: it inserts empty /** */ stubs.');
     return tree;
   };
 }

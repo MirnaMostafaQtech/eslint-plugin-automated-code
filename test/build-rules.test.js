@@ -203,6 +203,47 @@ test('`signalMembers: []` turns signal checks off', () => {
   assert.deepStrictEqual(ruleIds, []);
 });
 
+test('fixing never inserts an empty doc-comment stub (regression: require-jsdoc fixer)', () => {
+  const code = `
+    ${SIGNAL_STUBS}
+    @Component({})
+    class Widget {
+      @Input() value = 0;
+      readonly status = input();
+    }
+  `;
+  const result = linter.verifyAndFix(code, {
+    languageOptions: { parser: tseslint.parser },
+    plugins: { jsdoc, 'automated-code-docs': codeDocs },
+    rules: codeDocs.buildRules(),
+  });
+  assert.strictEqual(result.fixed, false);
+  assert.strictEqual(result.output, code);
+  assert.strictEqual(result.messages.filter(m => m.ruleId === 'jsdoc/require-jsdoc').length, 3);
+});
+
+test('fixing never inserts an empty @example tag (regression: require-example fixer)', () => {
+  const code = `
+    ${DECORATOR_STUBS}
+    /**
+     * Renders a widget.
+     * @accessibility N/A — fixture only.
+     */
+    @Component({})
+    class Widget {}
+  `;
+  const result = linter.verifyAndFix(code, {
+    languageOptions: { parser: tseslint.parser },
+    plugins: { jsdoc, 'automated-code-docs': codeDocs },
+    rules: codeDocs.buildRules(),
+  });
+  // With enableFixer off, require-example still attaches a fix that rewrites the comment
+  // unchanged, so ESLint reports `fixed: true` (and a circular-fixes warning). What matters is
+  // that the text is untouched and the warning stays.
+  assert.strictEqual(result.output, code);
+  assert.deepStrictEqual(result.messages.map(m => m.ruleId), ['jsdoc/require-example']);
+});
+
 test('the `severity` option escalates to error', () => {
   const messages = linter.verify(
     `${DECORATOR_STUBS}\n@Component({})\nclass Widget {}`,

@@ -10,7 +10,7 @@ Every public building block, Angular UI and .NET back-end, must carry complete d
 
 **Business impact:** cuts UI developer onboarding time and enables IDE IntelliSense tooltips, reducing time wasted reading source code to understand component contracts.
 
-**Reference implementations:** `qAI.DashBoard` (Angular 19, mostly signal inputs, branch `feature/tsdoc-documentation-dod`), `qAIPlatform` (Angular 21, signal inputs; the pilot was lost and must be redone, see Status), and `qElite-DGA` (.NET 10, `Directory.Build.props`).
+**Reference implementations:** `qAI.DashBoard` (Angular 19, mostly signal inputs, branch `feature/tsdoc-documentation-dod`), and `qElite-DGA` (.NET 10, `Directory.Build.props`).
 
 ## The documentation standard
 
@@ -223,7 +223,7 @@ Enforcement lives in tools the team already runs daily, at warning level, so gap
 | Enforcement tool (Angular) | ESLint + `eslint-plugin-jsdoc` | Already part of `npm run lint`; shows warnings live in VS Code; no new pipeline step |
 | Enforcement tool (.NET) | Compiler warning `CS1591` | Built into the C# compiler; shows in Visual Studio's Error List; no package needed |
 | `@accessibility` check | Shared package @qemam/eslint-plugin-automated-code-docs | `eslint-plugin-jsdoc` has no rule to require a custom tag, so the package adds one; one versioned package means a fix lands once for every repo |
-| Severity | `warn` in existing repos, `error` in new ones | Existing code has a large gap (177 in qAI.DashBoard before its TSDoc work, 171 in qAIPlatform, 3,832 in qElite-DGA); errors would break every build on day one. A new repo starts at zero, so it can use `error` from the start (see [Rollout](#rollout)) |
+| Severity | `warn` in existing repos, `error` in new ones | Existing code has a large gap (177 in qAI.DashBoard before its TSDoc work, 3,832 in qElite-DGA); errors would break every build on day one. A new repo starts at zero, so it can use `error` from the start (see [Rollout](#rollout)) |
 | Rejected: manual review checklist | - | Depends on memory; no automatic signal |
 | Rejected: separate Compodoc step | - | Runs after the build only; no live IDE feedback |
 
@@ -247,7 +247,7 @@ The rules come from one shared package, so no rule code is copied between repos.
 
    The `ng add` setup in step 2 picks the `eslint-plugin-jsdoc` version from the developer's Node: `^64` on Node 22.22.2 or newer, `^63` on 22.13, `^62` on 20.19, `^61` on 20.11, `^50` on 18.18. Use the same Node major in CI.
 
-   `ng add angular-eslint` also turns on angular-eslint's default rules at `error`. On existing code they usually report errors unrelated to documentation (80 in qAIPlatform, mostly template accessibility), so `npm run lint` exits with code 1 and would fail CI. Decide per repo: fix those errors, or keep only the documentation rules for now and add the defaults later. Record the count either way.
+   `ng add angular-eslint` also turns on angular-eslint's default rules at `error`. On existing code they usually report errors unrelated to documentation (mostly template accessibility), so `npm run lint` exits with code 1 and would fail CI. Decide per repo: fix those errors, or keep only the documentation rules for now and add the defaults later. Record the count either way.
 2. Install and set up the package with one command:
 
    ```bash
@@ -277,7 +277,7 @@ The rules come from one shared package, so no rule code is copied between repos.
 5. Run `npm run lint` and record the documentation warning count as the repo's baseline in `docs/engineering/automated-code-documentation.md`.
 6. Add a line to the repo's `CLAUDE.md` or `README.md` linking to that doc.
 
-Do not run `eslint --fix` to clear these warnings: it inserts empty `/** */` stubs, which removes the warning without adding any documentation.
+`eslint --fix` and fix-on-save (`source.fixAll.eslint`) never clear these warnings. Since version 0.2.0, `buildRules()` turns off the fixers of `jsdoc/require-jsdoc` and `jsdoc/require-example`, which would otherwise insert an empty `/** */` stub or an empty `@example` tag and hide the gap. Other rules (Prettier, import sorting) still fix as before. On a `--fix` run, ESLint may print an `ESLintCircularFixesWarning`: `require-example` still offers a fix that rewrites the comment unchanged. The file is not changed, and the warning can be ignored.
 
 ## The shared ESLint package
 
@@ -320,7 +320,7 @@ Keep `decorators` and `memberDecorators` separate: a class decorator name never 
 
 Since version 0.2.0 the package checks signal members with no extra setup: `input()`, `input.required()`, `output()`, `model()`, and `model.required()`. It checks only direct properties of a class that has one of the `decorators`, so a plain class that calls a function named `input()` is never flagged. Other signal functions (`signal()`, `computed()`, `viewChild()`) are not inputs and are not checked.
 
-Repos on version 0.1.0 may have a workaround in `eslint.config.js` that added these selectors by hand (the qAIPlatform pilot used one). Delete it when moving to 0.2.0, or every undocumented signal member is reported twice.
+Repos on version 0.1.0 may have a workaround in `eslint.config.js` that added these selectors by hand. Delete it when moving to 0.2.0, or every undocumented signal member is reported twice.
 
 ### Publishing
 
@@ -471,13 +471,12 @@ A new project has no undocumented code, so it starts at `error` and never builds
 
 ## Approval and open items
 
-Three pilots were run; two are in place and one (qAIPlatform) must be redone, see Status. Approval is needed to roll this out to every Angular and MVC repo.
+Two pilots are in place, see Status. Approval is needed to roll this out to every Angular and MVC repo.
 
 | Repo | Stack | Status | Baseline |
 | --- | --- | --- | --- |
 | qAI.DashBoard | Angular 19 | Implemented and committed; the rename to `@qemam/eslint-plugin-automated-code-docs` is local, not committed yet (the committed version still uses `@qemam/eslint-plugin-doc-dod`) | 119 warnings, recorded with package 0.1.0, which did not check signal inputs. The repo uses them a lot: on the commit before the TSDoc work, package 0.2.0 reports 177 (35 classes, 3 decorator members, 56 signal members, 60 missing `@accessibility`, 23 missing `@example`). Re-measure on the current branch after moving to 0.2.0 |
 | qElite-DGA (I-line) | .NET 10 | Implemented; the wording update ("Automated Code Documentation", corrected baseline in `Docs/architecture/AutomatedCodeDocumentation.md`) is local, not checked in to TFVC yet | 3,832 `CS1591` warnings in 557 files across 13 projects (most in `qElite.Models`: 1,963). Recorded Oct 7, 2026; the 5 GIS projects in the `.sln` were not on disk, so they are not counted. Recorded before migrations and test projects were excluded (.NET step 5); measure again after adding the exclusions |
-| qAIPlatform (G-line) | Angular 21 | Not in place. The pilot was done locally on branch `fix/frontend-hard-rules`, but on Oct 18, 2026 that branch was gone from the local clone, and `origin/fix/frontend-hard-rules` has no `eslint.config.js` and no `.vscode/settings.json`. The work was never pushed and must be redone | 171 warnings recorded during the pilot (47 missing class comments, 69 undocumented signal inputs/outputs, 51 missing `@accessibility`, 4 missing `@example`); cannot be reproduced until the setup is redone |
 
 **Open items**
 
@@ -485,6 +484,4 @@ Three pilots were run; two are in place and one (qAIPlatform) must be redone, se
 | --- | --- | --- |
 | The ESLint package is not published to an npm feed | `npm install` fails in CI and on every machine except the author's (repos use a `file:` path) | Create a git repo for the package and an npm feed in Azure Artifacts on `tfs25.alqemam.com`, publish it, then switch each repo to `"^0.2.0"`. It does not belong in `qMarketPlace`, which holds Claude Code plugins, not npm packages |
 | The package source is only on one machine (`D:\General\eslint-plugin-qemam-doc-dod`) | No backup and no review; other teams cannot read or fix it | Push it to the new repo, then replace the path in [The shared ESLint package](#the-shared-eslint-package) with the repo link |
-| The qAIPlatform pilot was lost | One of the three reference implementations does not exist | On a new branch: `ng add angular-eslint@21` (and decide on its default errors, see Angular step 1), then `ng add D:/General/eslint-plugin-qemam-doc-dod`. Record the new baseline and push the branch |
-| `jsdoc/require-jsdoc` can insert empty `/** */` stubs on fix | Any developer with `"source.fixAll.eslint"` in `editor.codeActionsOnSave` gets empty stubs on every save, which clears the warnings with no documentation. The "do not run `eslint --fix`" note does not cover this | Set `enableFixer: false` in the `jsdoc/require-jsdoc` options inside `buildRules()`, add a test, and publish |
 | qElite-DGA baseline excludes 5 GIS projects | The real total is higher than 3,832 | Get the GIS projects, rebuild, and update the table |
