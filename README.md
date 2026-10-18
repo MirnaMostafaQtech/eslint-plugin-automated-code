@@ -9,12 +9,22 @@ description.
 
 ## Install
 
+In an Angular workspace with `eslint.config.js`, one command installs the package and sets it up
+(`eslint-plugin-jsdoc`, `eslint.config.js`, and the VS Code settings):
+
 ```bash
-npm install --save-dev @qemam/eslint-plugin-automated-code-docs eslint-plugin-jsdoc
+ng add @qemam/eslint-plugin-automated-code-docs
 ```
 
-Not on the org npm feed yet: until it is published, install from a local checkout
-(`"file:<path-to-this-folder>"` in `package.json`).
+Not on the org npm feed yet: until it is published, pass the path of a local checkout instead of
+the name. It installs from that folder and runs the same setup:
+
+```bash
+ng add <path-to-this-folder>
+```
+
+If the package is already installed, run only the setup with
+`ng generate @qemam/eslint-plugin-automated-code-docs:ng-add`.
 
 ## Documentation
 

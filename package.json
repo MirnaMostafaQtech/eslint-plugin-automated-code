@@ -3,8 +3,13 @@
     "version": "0.2.0",
     "description": "ESLint rules enforcing the org-wide Automated Code Documentation standard (summary, @example, @accessibility, and @Input/@Output descriptions) on Angular components, services, directives, and pipes.",
     "main": "lib/index.js",
+    "schematics": "./schematics/collection.json",
+    "ng-add": {
+        "save": "devDependencies"
+    },
     "files": [
-        "lib"
+        "lib",
+        "schematics"
     ],
     "scripts": {
         "test": "node --test test/",
@@ -23,6 +28,7 @@
         "eslint-plugin-jsdoc": ">=50"
     },
     "devDependencies": {
+        "@angular-devkit/schematics": "^19.2.27",
         "eslint": "^9.39.5",
         "eslint-plugin-jsdoc": "^64.5.4",
         "typescript-eslint": "^8.70.1"

@@ -1,0 +1,197 @@
+'use strict';
+
+const assert = require('node:assert');
+const path = require('node:path');
+const { test } = require('node:test');
+const { HostTree } = require('@angular-devkit/schematics');
+const { SchematicTestRunner } = require('@angular-devkit/schematics/testing');
+const { Linter } = require('eslint');
+const tseslint = require('typescript-eslint');
+const codeDocs = require('..');
+
+const runner = new SchematicTestRunner('automated-code-docs', path.join(__dirname, '../schematics/collection.json'));
+
+const PACKAGE_JSON = JSON.stringify(
+  { name: 'app', dependencies: { '@angular/core': '^21.0.0' }, devDependencies: { eslint: '^9.0.0' } },
+  null,
+  2
+);
+
+const CJS_CONFIG = `// @ts-check
+const tseslint = require('typescript-eslint');
+
+module.exports = tseslint.config(
+  {
+    files: ['**/*.ts'],
+    extends: [...tseslint.configs.recommended],
+    rules: {
+      '@typescript-eslint/no-unused-vars': 'off',
+    },
+  },
+);
+`;
+
+const UNDOCUMENTED_COMPONENT = `
+function Component(..._a: unknown[]) { return (..._b: unknown[]) => {}; }
+const input = (..._a: unknown[]) => {};
+@Component({})
+export class Widget {
+  readonly value = input(0);
+}
+`;
+
+function makeTree(files) {
+  const tree = new HostTree();
+  for (const [file, content] of Object.entries(files)) {
+    tree.create(file, content);
+  }
+  return tree;
+}
+
+async function runNgAdd(files, options = { skipInstall: true }) {
+  const logs = [];
+  const subscription = runner.logger.subscribe(entry => logs.push(entry.message));
+  try {
+    const tree = await runner.runSchematic('ng-add', options, makeTree(files));
+    return { tree, logs, read: file => tree.readContent(file) };
+  } finally {
+    subscription.unsubscribe();
+  }
+}
+
+/** Evaluates a generated CommonJS eslint.config.js with the real packages and lints a sample component. */
+function lintWithConfig(configSource) {
+  const module = { exports: null };
+  const localRequire = id => (id === '@qemam/eslint-plugin-automated-code-docs' ? codeDocs : require(id));
+  new Function('require', 'module', 'exports', configSource)(localRequire, module, module.exports);
+  const messages = new Linter({ configType: 'flat' }).verify(UNDOCUMENTED_COMPONENT, module.exports, 'widget.ts');
+  return messages.map(m => m.ruleId);
+}
+
+test('wires the rules into a CommonJS eslint.config.js and the result lints', async () => {
+  const { read } = await runNgAdd({ '/package.json': PACKAGE_JSON, '/eslint.config.js': CJS_CONFIG });
+  const config = read('/eslint.config.js');
+
+  assert.match(config, /const tseslint = require\('typescript-eslint'\);\nconst jsdoc = require\('eslint-plugin-jsdoc'\);\nconst codeDocs = require\('@qemam\/eslint-plugin-automated-code-docs'\);/);
+  assert.match(config, /rules: \{ \.\.\.codeDocs\.buildRules\(\) \}/);
+  assert.deepStrictEqual(lintWithConfig(config).sort(), [
+    'automated-code-docs/require-accessibility-tag',
+    'jsdoc/require-jsdoc', // class
+    'jsdoc/require-jsdoc', // signal input
+  ]);
+});
+
+test('running ng add twice does not add the block twice', async () => {
+  const first = await runNgAdd({ '/package.json': PACKAGE_JSON, '/eslint.config.js': CJS_CONFIG });
+  const second = await runNgAdd({
+    '/package.json': first.read('/package.json'),
+    '/eslint.config.js': first.read('/eslint.config.js'),
+  });
+  const config = second.read('/eslint.config.js');
+  assert.strictEqual(config.match(/codeDocs\.buildRules/g).length, 1);
+  assert.strictEqual(config.match(/require\('eslint-plugin-jsdoc'\)/g).length, 1);
+});
+
+test('reuses an existing eslint-plugin-jsdoc import instead of declaring it again', async () => {
+  const source = CJS_CONFIG.replace(
+    "const tseslint = require('typescript-eslint');",
+    "const tseslint = require('typescript-eslint');\nconst jsdocPlugin = require('eslint-plugin-jsdoc');"
+  );
+  const { read } = await runNgAdd({ '/package.json': PACKAGE_JSON, '/eslint.config.js': source });
+  const config = read('/eslint.config.js');
+  assert.strictEqual(config.match(/require\('eslint-plugin-jsdoc'\)/g).length, 1);
+  assert.match(config, /plugins: \{ jsdoc: jsdocPlugin, 'automated-code-docs': codeDocs \}/);
+  assert.ok(lintWithConfig(config).includes('jsdoc/require-jsdoc'));
+});
+
+test('handles an ESM config with multi-line imports', async () => {
+  const source = `import {
+  defineConfig,
+} from 'eslint/config';
+import tseslint from 'typescript-eslint';
+
+export default defineConfig([
+  { files: ['**/*.ts'], extends: [tseslint.configs.recommended] }
+]);
+`;
+  const { read } = await runNgAdd({ '/package.json': PACKAGE_JSON, '/eslint.config.mjs': source });
+  const config = read('/eslint.config.mjs');
+  assert.match(config, /import tseslint from 'typescript-eslint';\nimport jsdoc from 'eslint-plugin-jsdoc';\nimport codeDocs from '@qemam\/eslint-plugin-automated-code-docs';/);
+  assert.match(config, /extends: \[tseslint\.configs\.recommended\] \},\n {2}\{\n/);
+  assert.match(config, /buildRules\(\) \},\n {2}\},\n\]\);\n$/);
+});
+
+test('adds eslint-plugin-jsdoc to devDependencies, or leaves an existing version alone', async () => {
+  const added = await runNgAdd({ '/package.json': PACKAGE_JSON, '/eslint.config.js': CJS_CONFIG });
+  assert.ok(JSON.parse(added.read('/package.json')).devDependencies['eslint-plugin-jsdoc']);
+
+  const existing = JSON.stringify({ name: 'app', devDependencies: { 'eslint-plugin-jsdoc': '^50.0.0' } });
+  const kept = await runNgAdd({ '/package.json': existing, '/eslint.config.js': CJS_CONFIG });
+  assert.strictEqual(JSON.parse(kept.read('/package.json')).devDependencies['eslint-plugin-jsdoc'], '^50.0.0');
+});
+
+test('stops with the angular-eslint command for the repo\'s Angular major when there is no ESLint config', async () => {
+  await assert.rejects(runNgAdd({ '/package.json': PACKAGE_JSON }), /ng add angular-eslint@21/);
+});
+
+test('stops with a migration message when only .eslintrc.json exists', async () => {
+  await assert.rejects(
+    runNgAdd({ '/package.json': PACKAGE_JSON, '/.eslintrc.json': '{}' }),
+    /Found \.eslintrc\.json but no eslint\.config\.js/
+  );
+});
+
+test('leaves a config on the old package name untouched and warns', async () => {
+  const source = CJS_CONFIG.replace(
+    "const tseslint = require('typescript-eslint');",
+    "const tseslint = require('typescript-eslint');\nconst docDod = require('@qemam/eslint-plugin-doc-dod');"
+  );
+  const { read, logs } = await runNgAdd({ '/package.json': PACKAGE_JSON, '/eslint.config.js': source });
+  assert.strictEqual(read('/eslint.config.js'), source);
+  assert.ok(logs.some(line => line.includes('old package name')));
+});
+
+test('creates .vscode/extensions.json, or adds the ESLint extension keeping comments', async () => {
+  const created = await runNgAdd({ '/package.json': PACKAGE_JSON, '/eslint.config.js': CJS_CONFIG });
+  assert.deepStrictEqual(JSON.parse(created.read('/.vscode/extensions.json')).recommendations, ['dbaeumer.vscode-eslint']);
+
+  const existing = '{\n  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=827846\n  "recommendations": ["angular.ng-template"]\n}\n';
+  const updated = await runNgAdd({
+    '/package.json': PACKAGE_JSON,
+    '/eslint.config.js': CJS_CONFIG,
+    '/.vscode/extensions.json': existing,
+  });
+  const text = updated.read('/.vscode/extensions.json');
+  assert.match(text, /\/\/ For more information/);
+  assert.match(text, /"recommendations": \["dbaeumer\.vscode-eslint", "angular\.ng-template"\]/);
+});
+
+test('removes VS Code settings that stop live warnings and keeps the rest', async () => {
+  const settings = JSON.stringify({
+    'editor.formatOnSave': true,
+    'eslint.options': { overrideConfigFile: '.eslintrc.json' },
+    'eslint.workingDirectories': ['../other-repo', './src'],
+    'eslint.useFlatConfig': false,
+  });
+  const { tree, read } = await runNgAdd({
+    '/package.json': PACKAGE_JSON,
+    '/eslint.config.js': CJS_CONFIG,
+    '/.vscode/settings.json': settings,
+  });
+  assert.deepStrictEqual(JSON.parse(read('/.vscode/settings.json')), {
+    'editor.formatOnSave': true,
+    'eslint.workingDirectories': ['./src'],
+  });
+
+  const untouched = await runNgAdd({ '/package.json': PACKAGE_JSON, '/eslint.config.js': CJS_CONFIG });
+  assert.strictEqual(untouched.tree.exists('/.vscode/settings.json'), false);
+  assert.ok(tree.exists('/.vscode/settings.json'));
+});
+
+test('skipVscode leaves .vscode alone', async () => {
+  const { tree } = await runNgAdd(
+    { '/package.json': PACKAGE_JSON, '/eslint.config.js': CJS_CONFIG },
+    { skipInstall: true, skipVscode: true }
+  );
+  assert.strictEqual(tree.exists('/.vscode/extensions.json'), false);
+});
