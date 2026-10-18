@@ -1,6 +1,6 @@
 # شرح الـ plugin ومزاياها
 
-`@qemam/eslint-plugin-automated-code-docs`
+`@qemam/eslint-plugin-automated-code`
 
 plugin لـ ESLint بتطبّق معيار **Automated Code Documentation** على مشاريع Angular. أي كلاس public لازم يكون عليه تعليق توثيق كامل، ولو ناقص بيظهر **warning** في الـ lint وفي VS Code وقت الكتابة.
 
@@ -35,7 +35,7 @@ plugin لـ ESLint بتطبّق معيار **Automated Code Documentation** عل
 أمر واحد بس:
 
 ```bash
-ng add @qemam/eslint-plugin-automated-code-docs
+ng add @qemam/eslint-plugin-automated-code
 ```
 
 1. **بتتأكد من نسخة الـ Node قبل أي حاجة.** لو أقدم من 18.18 بتقف ومابتغيّرش ولا ملف ([schematics/ng-add/index.js](../schematics/ng-add/index.js)).
@@ -55,7 +55,7 @@ ng add @qemam/eslint-plugin-automated-code-docs
    - لو المشروع لسه على `.eslintrc`، بتطلب migrate الأول.
 4. **مابتبوّظش الـ config الموجود.** بتضيف block منفصل في الآخر من غير ما تعدّل في الموجود. وبتشتغل مع CommonJS وESM و`defineConfig([...])`، ولو `jsdoc` متعمله import باسم تاني بتستخدم نفس الاسم.
 5. **ممكن تتشغّل أكتر من مرة عادي.**
-6. **بتكتشف المشاكل القديمة وتنبّه عليها:** الاسم القديم `@qemam/eslint-plugin-doc-dod`، والـ workaround القديم بتاع الـ signals اللي بيطلّع كل warning مرتين.
+6. **بتكتشف المشاكل القديمة وتنبّه عليها:** الأسماء القديمة `@qemam/eslint-plugin-doc-dod` و`@qemam/eslint-plugin-automated-code-docs`، والـ workaround القديم بتاع الـ signals اللي بيطلّع كل warning مرتين.
 7. **بتظبط VS Code:**
    - بتضيف ESLint extension للـ recommendations.
    - بتشيل الإعدادات اللي بتوقّف الـ warnings الحية من غير ما حد يحس: `overrideConfigFile` اللي بيشاور على ملف مش موجود، و`workingDirectories` اللي خارج الـ repo، و`useFlatConfig: false`.

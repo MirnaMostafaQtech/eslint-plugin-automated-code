@@ -222,7 +222,7 @@ Enforcement lives in tools the team already runs daily, at warning level, so gap
 | --- | --- | --- |
 | Enforcement tool (Angular) | ESLint + `eslint-plugin-jsdoc` | Already part of `npm run lint`; shows warnings live in VS Code; no new pipeline step |
 | Enforcement tool (.NET) | Compiler warning `CS1591` | Built into the C# compiler; shows in Visual Studio's Error List; no package needed |
-| `@accessibility` check | Shared package @qemam/eslint-plugin-automated-code-docs | `eslint-plugin-jsdoc` has no rule to require a custom tag, so the package adds one; one versioned package means a fix lands once for every repo |
+| `@accessibility` check | Shared package @qemam/eslint-plugin-automated-code | `eslint-plugin-jsdoc` has no rule to require a custom tag, so the package adds one; one versioned package means a fix lands once for every repo |
 | Severity | `warn` in existing repos, `error` in new ones | Existing code has a large gap (177 in qAI.DashBoard before its TSDoc work, 3,832 in qElite-DGA); errors would break every build on day one. A new repo starts at zero, so it can use `error` from the start (see [Rollout](#rollout)) |
 | Rejected: manual review checklist | - | Depends on memory; no automatic signal |
 | Rejected: separate Compodoc step | - | Runs after the build only; no live IDE feedback |
@@ -251,16 +251,16 @@ The rules come from one shared package, so no rule code is copied between repos.
 2. Install and set up the package with one command:
 
    ```bash
-   ng add @qemam/eslint-plugin-automated-code-docs
+   ng add @qemam/eslint-plugin-automated-code
    ```
 
    Until the package is on the org npm feed, pass the path of a local checkout instead of the name. It installs from that folder (saved as a `file:` entry) and runs the same setup:
 
    ```bash
-   ng add D:/General/eslint-plugin-qemam-doc-dod
+   ng add D:/General/eslint-plugin
    ```
 
-   If the package is already installed, run only the setup with `ng generate @qemam/eslint-plugin-automated-code-docs:ng-add`.
+   If the package is already installed, run only the setup with `ng generate @qemam/eslint-plugin-automated-code:ng-add`.
 
    The setup does the following, and prints each change:
 
@@ -272,7 +272,7 @@ The rules come from one shared package, so no rule code is copied between repos.
    It stops with a message, and changes nothing, when Node is older than 18.18 (ESLint 9 does not run there), when the repo has no `eslint.config.js` (it prints the `ng add angular-eslint@<major>` command for the repo's Angular version), or when it still uses `.eslintrc.*`. Running it twice is safe. Options: `--skip-vscode` leaves `.vscode` alone; `--skip-install` skips `npm install`.
 
    `buildRules()` adds four rules at `warn`, scoped only to `@Component`/`@Injectable`/`@Directive`/`@Pipe` classes and their members: decorator `@Input`/`@Output` and signal `input()`/`output()`/`model()` (including `.required()`). Options and rule details: see [The shared ESLint package](#the-shared-eslint-package). If the repo also uses `jsdoc/check-tag-names`, register `@accessibility` as described in [JSDoc vs TSDoc](#jsdoc-vs-tsdoc-what-we-use).
-3. If the repo already used the package before version 0.2.0, the setup leaves `eslint.config.js` as it is. Check two things by hand: replace the old package name `@qemam/eslint-plugin-doc-dod` with `@qemam/eslint-plugin-automated-code-docs`, and delete any old signal-member workaround (a `signalMemberContexts` list added to `jsdoc/require-jsdoc`). The setup prints a warning for both. Keeping the workaround reports every undocumented signal member twice.
+3. If the repo already used the package under an old name, the setup leaves `eslint.config.js` as it is. Check two things by hand: replace the old package name (`@qemam/eslint-plugin-doc-dod` or `@qemam/eslint-plugin-automated-code-docs`) with `@qemam/eslint-plugin-automated-code` in `eslint.config.js` and `package.json`, and delete any old signal-member workaround (a `signalMemberContexts` list added to `jsdoc/require-jsdoc`). The setup prints a warning for both. Keeping the workaround reports every undocumented signal member twice. The plugin key `'automated-code-docs'` and the rule ID `automated-code-docs/require-accessibility-tag` did not change with the package name, so existing `eslint-disable` comments keep working.
 4. Run **Developer: Reload Window** in VS Code so the extension picks up the new settings.
 5. Run `npm run lint` and record the documentation warning count as the repo's baseline in `docs/engineering/automated-code-documentation.md`.
 6. Add a line to the repo's `CLAUDE.md` or `README.md` linking to that doc.
@@ -281,7 +281,7 @@ The rules come from one shared package, so no rule code is copied between repos.
 
 ## The shared ESLint package
 
-`@qemam/eslint-plugin-automated-code-docs` holds the Angular rules, so every repo installs one versioned package instead of copying rule code. It was piloted in qAI.DashBoard, then extracted. Source: `D:\General\eslint-plugin-qemam-doc-dod`.
+`@qemam/eslint-plugin-automated-code` holds the Angular rules, so every repo installs one versioned package instead of copying rule code. It was piloted in qAI.DashBoard, then extracted. Source: `D:\General\eslint-plugin`.
 
 ### What `buildRules()` returns
 
@@ -475,7 +475,7 @@ Two pilots are in place, see Status. Approval is needed to roll this out to ever
 
 | Repo | Stack | Status | Baseline |
 | --- | --- | --- | --- |
-| qAI.DashBoard | Angular 19 | Implemented and committed; the rename to `@qemam/eslint-plugin-automated-code-docs` is local, not committed yet (the committed version still uses `@qemam/eslint-plugin-doc-dod`) | 119 warnings, recorded with package 0.1.0, which did not check signal inputs. The repo uses them a lot: on the commit before the TSDoc work, package 0.2.0 reports 177 (35 classes, 3 decorator members, 56 signal members, 60 missing `@accessibility`, 23 missing `@example`). Re-measure on the current branch after moving to 0.2.0 |
+| qAI.DashBoard | Angular 19 | Implemented and committed with the old name `@qemam/eslint-plugin-doc-dod` (a local, uncommitted change moves it to `@qemam/eslint-plugin-automated-code-docs`). Move it to `@qemam/eslint-plugin-automated-code` and the new folder path | 119 warnings, recorded with package 0.1.0, which did not check signal inputs. The repo uses them a lot: on the commit before the TSDoc work, package 0.2.0 reports 177 (35 classes, 3 decorator members, 56 signal members, 60 missing `@accessibility`, 23 missing `@example`). Re-measure on the current branch after moving to 0.2.0 |
 | qElite-DGA (I-line) | .NET 10 | Implemented; the wording update ("Automated Code Documentation", corrected baseline in `Docs/architecture/AutomatedCodeDocumentation.md`) is local, not checked in to TFVC yet | 3,832 `CS1591` warnings in 557 files across 13 projects (most in `qElite.Models`: 1,963). Recorded Oct 7, 2026; the 5 GIS projects in the `.sln` were not on disk, so they are not counted. Recorded before migrations and test projects were excluded (.NET step 5); measure again after adding the exclusions |
 
 **Open items**

@@ -4,14 +4,14 @@ const path = require('node:path');
 const ownPackage = require('../../package.json');
 
 const PACKAGE_NAME = ownPackage.name;
-const OLD_PACKAGE_NAME = '@qemam/eslint-plugin-doc-dod';
+const OLD_PACKAGE_NAMES = ['@qemam/eslint-plugin-doc-dod', '@qemam/eslint-plugin-automated-code-docs'];
 const JSDOC_PACKAGE = 'eslint-plugin-jsdoc';
 const ESLINT_EXTENSION = 'dbaeumer.vscode-eslint';
 const FLAT_CONFIG_FILES = ['eslint.config.js', 'eslint.config.mjs', 'eslint.config.cjs'];
 const LEGACY_CONFIG_FILES = ['.eslintrc.json', '.eslintrc.js', '.eslintrc.cjs', '.eslintrc.yml', '.eslintrc.yaml', '.eslintrc'];
 
 /**
- * `ng add @qemam/eslint-plugin-automated-code-docs` entry point. Runs after the CLI has installed
+ * `ng add @qemam/eslint-plugin-automated-code` entry point. Runs after the CLI has installed
  * this package, and does the per-repo setup from the implementation guide in one step:
  * adds eslint-plugin-jsdoc, wires `buildRules()` into eslint.config.js, and fixes the VS Code
  * settings that stop warnings from showing while typing.
@@ -133,12 +133,13 @@ function scheduleInstall(context, logger) {
 function wireEslintConfig(tree, configPath, logger) {
   const source = tree.read(configPath).toString('utf8');
 
-  if (source.includes(OLD_PACKAGE_NAME)) {
-    logger.warn(`${configPath} still uses the old package name ${OLD_PACKAGE_NAME}. ` +
+  const oldName = OLD_PACKAGE_NAMES.find(name => importsPackage(source, name));
+  if (oldName) {
+    logger.warn(`${configPath} still uses the old package name ${oldName}. ` +
       `Replace it with ${PACKAGE_NAME} by hand; nothing was added, to avoid running the rules twice.`);
     return;
   }
-  if (source.includes(PACKAGE_NAME)) {
+  if (importsPackage(source, PACKAGE_NAME)) {
     logger.info(`${configPath} already uses ${PACKAGE_NAME}; left unchanged.`);
     warnAboutSignalWorkaround(source, configPath, logger);
     return;
@@ -181,6 +182,12 @@ function warnAboutSignalWorkaround(source, configPath, logger) {
       '"...codeDocs.buildRules()" directly: the package checks signal members itself, and keeping ' +
       'the workaround reports every undocumented signal member twice.');
   }
+}
+
+// Matches the name in quotes only: the current name is a prefix of the old
+// `@qemam/eslint-plugin-automated-code-docs`, so a plain `includes` would confuse the two.
+function importsPackage(source, packageName) {
+  return source.includes(`'${packageName}'`) || source.includes(`"${packageName}"`);
 }
 
 function findImportName(source, packageName, esm) {

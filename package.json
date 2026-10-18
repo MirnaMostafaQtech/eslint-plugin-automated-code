@@ -1,5 +1,5 @@
 {
-    "name": "@qemam/eslint-plugin-automated-code-docs",
+    "name": "@qemam/eslint-plugin-automated-code",
     "version": "0.2.0",
     "description": "ESLint rules enforcing the org-wide Automated Code Documentation standard (summary, @example, @accessibility, and @Input/@Output descriptions) on Angular components, services, directives, and pipes.",
     "main": "lib/index.js",

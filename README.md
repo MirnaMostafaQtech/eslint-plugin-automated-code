@@ -1,6 +1,6 @@
 # Automated Code Documentation
 
-`@qemam/eslint-plugin-automated-code-docs`
+`@qemam/eslint-plugin-automated-code`
 
 ESLint rules for the org-wide Automated Code Documentation standard on Angular projects: every
 `@Component`, `@Injectable`, `@Directive`, and `@Pipe` class needs a summary, `@example`, and
@@ -13,7 +13,7 @@ In an Angular workspace with `eslint.config.js`, one command installs the packag
 (`eslint-plugin-jsdoc`, `eslint.config.js`, and the VS Code settings):
 
 ```bash
-ng add @qemam/eslint-plugin-automated-code-docs
+ng add @qemam/eslint-plugin-automated-code
 ```
 
 Not on the org npm feed yet: until it is published, pass the path of a local checkout instead of
@@ -24,7 +24,7 @@ ng add <path-to-this-folder>
 ```
 
 If the package is already installed, run only the setup with
-`ng generate @qemam/eslint-plugin-automated-code-docs:ng-add`.
+`ng generate @qemam/eslint-plugin-automated-code:ng-add`.
 
 ## Documentation
 
