@@ -483,5 +483,4 @@ Two pilots are in place, see Status. Approval is needed to roll this out to ever
 | Item | Impact | Next step |
 | --- | --- | --- |
 | The ESLint package is not published to an npm feed | `npm install` fails in CI and on every machine except the author's (repos use a `file:` path) | Create a git repo for the package and an npm feed in Azure Artifacts on `tfs25.alqemam.com`, publish it, then switch each repo to `"^0.2.0"`. It does not belong in `qMarketPlace`, which holds Claude Code plugins, not npm packages |
-| The package source is only on one machine (`D:\General\eslint-plugin-qemam-doc-dod`) | No backup and no review; other teams cannot read or fix it | Push it to the new repo, then replace the path in [The shared ESLint package](#the-shared-eslint-package) with the repo link |
 | qElite-DGA baseline excludes 5 GIS projects | The real total is higher than 3,832 | Get the GIS projects, rebuild, and update the table |
