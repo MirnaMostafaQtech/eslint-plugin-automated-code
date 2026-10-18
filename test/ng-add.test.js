@@ -195,3 +195,22 @@ test('skipVscode leaves .vscode alone', async () => {
   );
   assert.strictEqual(tree.exists('/.vscode/extensions.json'), false);
 });
+
+test('picks the newest eslint-plugin-jsdoc major that supports the running Node', () => {
+  const { jsdocVersionFor } = require('../schematics/ng-add');
+  assert.strictEqual(jsdocVersionFor('24.15.0'), '^64.5.4');
+  assert.strictEqual(jsdocVersionFor('22.22.2'), '^64.5.4');
+  assert.strictEqual(jsdocVersionFor('22.13.1'), '^63.3.3');
+  assert.strictEqual(jsdocVersionFor('20.20.2'), '^62.9.0');
+  assert.strictEqual(jsdocVersionFor('20.11.0'), '^61.7.1');
+  assert.strictEqual(jsdocVersionFor('18.18.0'), '^50.8.0');
+  assert.strictEqual(jsdocVersionFor('16.20.0'), null);
+});
+
+test('stops before changing anything when Node is too old for ESLint 9', () => {
+  const { checkNodeVersion } = require('../schematics/ng-add');
+  assert.throws(() => checkNodeVersion('16.20.0'), /Node 16\.20\.0 is too old.*Nothing was changed/);
+  assert.throws(() => checkNodeVersion('18.17.1'), /too old/);
+  assert.doesNotThrow(() => checkNodeVersion('18.18.0'));
+  assert.doesNotThrow(() => checkNodeVersion('20.20.2'));
+});

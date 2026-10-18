@@ -22,6 +22,7 @@ const LEGACY_CONFIG_FILES = ['.eslintrc.json', '.eslintrc.js', '.eslintrc.cjs', 
 function ngAdd(options = {}) {
   return (tree, context) => {
     const logger = context.logger;
+    checkNodeVersion(process.versions.node);
     const pkg = readJson(tree, '/package.json');
     if (!pkg) {
       throw new Error('No package.json found. Run "ng add" from the root of an Angular workspace.');
@@ -72,11 +73,47 @@ function addJsdocDependency(tree, pkg, logger) {
     logger.info(`${JSDOC_PACKAGE} is already in package.json (${installed}).`);
     return false;
   }
-  const version = ownPackage.devDependencies[JSDOC_PACKAGE];
+  const version = jsdocVersionFor(process.versions.node);
   pkg.devDependencies = sortKeys({ ...(pkg.devDependencies || {}), [JSDOC_PACKAGE]: version });
   writeJson(tree, '/package.json', pkg, tree.read('/package.json').toString('utf8'));
   logger.info(`Added ${JSDOC_PACKAGE}@${version} to devDependencies.`);
   return true;
+}
+
+// Newer eslint-plugin-jsdoc majors drop older Node versions, so the version is picked from the Node
+// running `ng add` (the developer's machine): the newest major that supports it.
+const JSDOC_VERSIONS = [
+  { minNode: [22, 22, 2], range: '^64.5.4' },
+  { minNode: [22, 13, 0], range: '^63.3.3' },
+  { minNode: [20, 19, 0], range: '^62.9.0' },
+  { minNode: [20, 11, 0], range: '^61.7.1' },
+  { minNode: [18, 18, 0], range: '^50.8.0' },
+];
+
+function jsdocVersionFor(nodeVersion) {
+  const current = nodeVersion.split('.').map(Number);
+  const atLeast = min => {
+    for (let i = 0; i < 3; i++) {
+      if (current[i] !== min[i]) {
+        return current[i] > min[i];
+      }
+    }
+    return true;
+  };
+  const match = JSDOC_VERSIONS.find(entry => atLeast(entry.minNode));
+  return match ? match.range : null;
+}
+
+/**
+ * Stops the setup before any file is changed when no eslint-plugin-jsdoc version supports this
+ * Node. Continuing would wire eslint.config.js to a plugin that was never installed, and every
+ * lint run would then fail.
+ */
+function checkNodeVersion(nodeVersion) {
+  if (!jsdocVersionFor(nodeVersion)) {
+    throw new Error(`Node ${nodeVersion} is too old: ESLint 9 needs Node 18.18 or newer. ` +
+      `Nothing was changed. Upgrade Node, then run "ng add ${PACKAGE_NAME}" again.`);
+  }
 }
 
 function scheduleInstall(context, logger) {
@@ -351,4 +388,4 @@ function sortKeys(object) {
   return Object.fromEntries(Object.entries(object).sort(([a], [b]) => a.localeCompare(b)));
 }
 
-module.exports = { ngAdd };
+module.exports = { ngAdd, jsdocVersionFor, checkNodeVersion };
