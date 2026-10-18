@@ -4,7 +4,8 @@
 
 ESLint rules for the org-wide Automated Code Documentation standard on Angular projects: every
 `@Component`, `@Injectable`, `@Directive`, and `@Pipe` class needs a summary, `@example`, and
-`@accessibility` tag, and every `@Input()`/`@Output()` needs a description.
+`@accessibility` tag, and every `@Input()`/`@Output()` and signal `input()`/`output()`/`model()` needs a
+description.
 
 ## Install
 

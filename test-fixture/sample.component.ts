@@ -39,3 +39,24 @@ export class DocumentedWidget {
   /** Emitted when the value changes. */
   @Output() changed = () => {};
 }
+
+// Signal-member stand-ins (Angular 17+ `input()` / `output()` / `model()`).
+const input = Object.assign((..._args: unknown[]) => {}, { required: (..._args: unknown[]) => {} });
+const output = (..._args: unknown[]) => {};
+
+/**
+ * A widget using signal members, used to confirm undocumented signals are flagged.
+ *
+ * @example
+ * <app-signal-widget [status]="s" (cleared)="reload()" />
+ *
+ * @accessibility N/A — fixture only, no real template.
+ */
+@Component({})
+export class SignalWidget {
+  // Undocumented — must be flagged.
+  readonly status = input.required();
+
+  /** Emitted when the widget is cleared. */
+  readonly cleared = output();
+}

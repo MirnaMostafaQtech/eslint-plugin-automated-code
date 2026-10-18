@@ -106,6 +106,103 @@ test('the `decorators` option restricts which class decorators are checked', () 
   assert.ok(lint(code, { decorators: ['Directive'] }).includes('jsdoc/require-jsdoc'));
 });
 
+const SIGNAL_STUBS = `
+${DECORATOR_STUBS}
+const input = Object.assign((..._a) => {}, { required: (..._a) => {} });
+const model = Object.assign((..._a) => {}, { required: (..._a) => {} });
+const output = (..._a) => {};
+`;
+
+test('each undocumented signal input/output/model on a @Component is flagged once', () => {
+  const ruleIds = lint(`
+    ${SIGNAL_STUBS}
+    /**
+     * Renders a badge.
+     * @example <app-badge [status]="s" />
+     * @accessibility N/A — fixture only.
+     */
+    @Component({})
+    class Badge {
+      readonly status = input.required<string>();
+      readonly compact = input(false);
+      readonly value = model(0);
+      readonly checked = model.required<boolean>();
+      readonly cleared = output<void>();
+    }
+  `);
+  assert.deepStrictEqual(ruleIds, Array(5).fill('jsdoc/require-jsdoc'));
+});
+
+test('documented signal members are silent', () => {
+  const ruleIds = lint(`
+    ${SIGNAL_STUBS}
+    /**
+     * Renders a badge.
+     * @example <app-badge [status]="s" />
+     * @accessibility N/A — fixture only.
+     */
+    @Component({})
+    class Badge {
+      /** The status to show. */
+      readonly status = input.required<string>();
+      /** Emits when dismissed. */
+      readonly cleared = output<void>();
+    }
+  `);
+  assert.deepStrictEqual(ruleIds, []);
+});
+
+test('signal calls outside a decorated class are ignored', () => {
+  const ruleIds = lint(`
+    ${SIGNAL_STUBS}
+    class PlainHelper {
+      readonly status = input.required();
+      readonly cleared = output();
+    }
+  `);
+  assert.deepStrictEqual(ruleIds, []);
+});
+
+test('other signal-like calls (signal, computed, viewChild) are not treated as inputs', () => {
+  const ruleIds = lint(`
+    ${SIGNAL_STUBS}
+    const signal = (..._a) => {};
+    const computed = (..._a) => {};
+    const viewChild = Object.assign((..._a) => {}, { required: (..._a) => {} });
+    /**
+     * Renders a badge.
+     * @example <app-badge />
+     * @accessibility N/A — fixture only.
+     */
+    @Component({})
+    class Badge {
+      readonly count = signal(0);
+      readonly doubled = computed(() => 0);
+      readonly host = viewChild.required('host');
+    }
+  `);
+  assert.deepStrictEqual(ruleIds, []);
+});
+
+test('`signalMembers: []` turns signal checks off', () => {
+  const ruleIds = lint(
+    `
+    ${SIGNAL_STUBS}
+    /**
+     * Renders a badge.
+     * @example <app-badge />
+     * @accessibility N/A — fixture only.
+     */
+    @Component({})
+    class Badge {
+      readonly status = input();
+    }
+  `,
+    { signalMembers: [] }
+  );
+  assert.deepStrictEqual(ruleIds, []);
+});
+
 test('the `severity` option escalates to error', () => {
   const messages = linter.verify(
     `${DECORATOR_STUBS}\n@Component({})\nclass Widget {}`,
