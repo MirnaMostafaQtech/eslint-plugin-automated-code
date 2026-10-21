@@ -257,8 +257,10 @@ The rules come from one shared package, so no rule code is copied between repos.
    Until the package is on the org npm feed, pass the path of a local checkout instead of the name. It installs from that folder (saved as a `file:` entry) and runs the same setup:
 
    ```bash
-   ng add D:/General/eslint-plugin
+   ng add "D:/General/Use Cases/eslint-plugin"
    ```
+
+   The path has a space, so keep the quotes.
 
    If the package is already installed, run only the setup with `ng generate @qemam/eslint-plugin-automated-code:ng-add`.
 
@@ -281,7 +283,7 @@ The rules come from one shared package, so no rule code is copied between repos.
 
 ## The shared ESLint package
 
-`@qemam/eslint-plugin-automated-code` holds the Angular rules, so every repo installs one versioned package instead of copying rule code. It was piloted in qAI.DashBoard, then extracted. Source: `D:\General\eslint-plugin`.
+`@qemam/eslint-plugin-automated-code` holds the Angular rules, so every repo installs one versioned package instead of copying rule code. It was piloted in qAI.DashBoard, then extracted. Source: `D:\General\Use Cases\eslint-plugin`.
 
 ### What `buildRules()` returns
 
