@@ -52,6 +52,28 @@ ruleTester.run('require-accessibility-tag', rule, {
       `,
       options: [{ decorators: ['Component'] }],
     },
+    {
+      // Tag text on the following lines, with more tags after it.
+      code: `
+        ${decoratorStubs()}
+        /**
+         * Renders a widget.
+         * @accessibility
+         *   Keyboard-operable via Enter/Space.
+         * @example <my-widget></my-widget>
+         */
+        @Component({})
+        class MyWidget {}
+      `,
+    },
+    {
+      code: `
+        ${decoratorStubs()}
+        /** @accessibility N/A - no DOM surface. */
+        @Injectable()
+        class MyService {}
+      `,
+    },
   ],
   invalid: [
     {
@@ -82,6 +104,52 @@ ruleTester.run('require-accessibility-tag', rule, {
         class MyDirective {}
       `,
       options: [{ decorators: ['Directive'] }],
+      errors: [{ messageId: 'missing' }],
+    },
+    {
+      // Regression: an empty tag used to clear the warning.
+      code: `
+        ${decoratorStubs()}
+        /**
+         * Renders a widget.
+         * @accessibility
+         */
+        @Component({})
+        class MyWidget {}
+      `,
+      errors: [{ messageId: 'empty' }],
+    },
+    {
+      // Empty tag followed by another tag: the next tag's text is not the description.
+      code: `
+        ${decoratorStubs()}
+        /**
+         * Renders a widget.
+         * @accessibility
+         * @example <my-widget></my-widget>
+         */
+        @Component({})
+        class MyWidget {}
+      `,
+      errors: [{ messageId: 'empty' }],
+    },
+    {
+      code: `
+        ${decoratorStubs()}
+        /** Renders a widget. @accessibility */
+        @Component({})
+        class MyWidget {}
+      `,
+      errors: [{ messageId: 'empty' }],
+    },
+    {
+      // Regression: a plain /* */ comment is not a doc comment and must not count.
+      code: `
+        ${decoratorStubs()}
+        /* @accessibility Keyboard-operable via Enter/Space. */
+        @Component({})
+        class MyWidget {}
+      `,
       errors: [{ messageId: 'missing' }],
     },
   ],

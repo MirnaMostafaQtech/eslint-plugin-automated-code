@@ -11,6 +11,9 @@
         "lib",
         "schematics"
     ],
+    "engines": {
+        "node": ">=18.18.0"
+    },
     "scripts": {
         "test": "node --test test/",
         "lint:fixture": "cd test-fixture && npx eslint . --no-config-lookup --config eslint.config.js"

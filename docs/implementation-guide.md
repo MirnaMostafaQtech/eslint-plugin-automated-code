@@ -265,7 +265,7 @@ The rules come from one shared package, so no rule code is copied between repos.
    The setup does the following, and prints each change:
 
    - Adds `eslint-plugin-jsdoc` to `devDependencies` if it is missing (the version that matches the developer's Node, see step 1), and runs `npm install`.
-   - Adds the two `require` lines (or `import` lines for ESM) to `eslint.config.js` and appends a separate `**/*.ts` block with `...codeDocs.buildRules()`. Flat config merges every block that matches a file, so the repo's own `**/*.ts` block is not touched.
+   - Adds the two `require` lines (or `import` lines for ESM) to `eslint.config.js` and appends a separate `**/*.ts` block with `...codeDocs.buildRules()`. Flat config merges every block that matches a file, so the repo's own `**/*.ts` block is not touched. The block ignores `**/*.spec.ts`, so test host components in specs are not flagged. A repo that was set up before this line was added keeps its old block when `ng add` runs again, so add the `ignores` line there by hand.
    - Adds `dbaeumer.vscode-eslint` to `.vscode/extensions.json` (creates the file if needed).
    - Removes the `.vscode/settings.json` entries that silently stop live warnings: an `eslint.options.overrideConfigFile` pointing to a missing file, `eslint.workingDirectories` outside the repo, and `eslint.useFlatConfig: false`. It never creates `settings.json`.
 
@@ -287,10 +287,10 @@ The rules come from one shared package, so no rule code is copied between repos.
 
 | Rule | Checks |
 | --- | --- |
-| `jsdoc/require-jsdoc` | A doc comment exists on the class and on every `@Input` / `@Output` and signal `input()` / `output()` / `model()` |
+| `jsdoc/require-jsdoc` | A doc comment exists on the class and on every `@Input` / `@Output` (on a property, an `accessor`, or a setter/getter) and signal `input()` / `output()` / `model()` |
 | `jsdoc/require-description` | The class comment has a summary |
 | `jsdoc/require-example` | The class comment has an `@example` tag |
-| `automated-code-docs/require-accessibility-tag` | The class comment has an `@accessibility` tag (the package's own rule) |
+| `automated-code-docs/require-accessibility-tag` | The class's `/** ... */` comment has an `@accessibility` tag with text after it (the package's own rule). A plain `/* */` comment or an empty tag does not count |
 
 All four fire only on classes with one of the listed decorators. Plain functions, functional guards, and models are never flagged; a class-based guard has `@Injectable`, so it is checked like any service.
 

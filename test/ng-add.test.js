@@ -1,7 +1,10 @@
 'use strict';
 
 const assert = require('node:assert');
+const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 const { test } = require('node:test');
 const { HostTree } = require('@angular-devkit/schematics');
 const { SchematicTestRunner } = require('@angular-devkit/schematics/testing');
@@ -60,12 +63,25 @@ async function runNgAdd(files, options = { skipInstall: true }) {
 }
 
 /** Evaluates a generated CommonJS eslint.config.js with the real packages and lints a sample component. */
-function lintWithConfig(configSource) {
+function lintWithConfig(configSource, filename = 'widget.ts') {
   const module = { exports: null };
   const localRequire = id => (id === '@qemam/eslint-plugin-automated-code' ? codeDocs : require(id));
   new Function('require', 'module', 'exports', configSource)(localRequire, module, module.exports);
-  const messages = new Linter({ configType: 'flat' }).verify(UNDOCUMENTED_COMPONENT, module.exports, 'widget.ts');
+  const messages = new Linter({ configType: 'flat' }).verify(UNDOCUMENTED_COMPONENT, module.exports, filename);
   return messages.map(m => m.ruleId);
+}
+
+/** Fails if a generated ESM config is not a valid module (for example a binding declared twice). */
+function assertValidModule(configSource) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ng-add-'));
+  const file = path.join(dir, 'eslint.config.mjs');
+  try {
+    fs.writeFileSync(file, configSource);
+    const result = spawnSync(process.execPath, ['--check', file], { encoding: 'utf8' });
+    assert.strictEqual(result.status, 0, result.stderr);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 test('wires the rules into a CommonJS eslint.config.js and the result lints', async () => {
@@ -79,6 +95,28 @@ test('wires the rules into a CommonJS eslint.config.js and the result lints', as
     'jsdoc/require-jsdoc', // class
     'jsdoc/require-jsdoc', // signal input
   ]);
+});
+
+test('the added block skips spec files, so test host components are not flagged', async () => {
+  const { read } = await runNgAdd({ '/package.json': PACKAGE_JSON, '/eslint.config.js': CJS_CONFIG });
+  const config = read('/eslint.config.js');
+  assert.match(config, /ignores: \['\*\*\/\*\.spec\.ts'\]/);
+  assert.deepStrictEqual(lintWithConfig(config, 'widget.spec.ts'), []);
+  assert.ok(lintWithConfig(config, 'widget.ts').includes('jsdoc/require-jsdoc'));
+});
+
+test('package.json engines matches the oldest Node the setup accepts', () => {
+  const { jsdocVersionFor } = require('../schematics/ng-add');
+  const ownPackage = require('../package.json');
+  const minimum = /^>=(\d+\.\d+\.\d+)$/.exec(ownPackage.engines.node)[1];
+  const [major, minor, patch] = minimum.split('.').map(Number);
+  assert.ok(jsdocVersionFor(minimum));
+  assert.strictEqual(jsdocVersionFor(patch > 0 ? `${major}.${minor}.${patch - 1}` : `${major}.${minor - 1}.99`), null);
+});
+
+test('plugin meta comes from package.json, so the version cannot drift', () => {
+  const ownPackage = require('../package.json');
+  assert.deepStrictEqual(codeDocs.meta, { name: ownPackage.name, version: ownPackage.version });
 });
 
 test('running ng add twice does not add the block twice', async () => {
@@ -119,6 +157,36 @@ export default defineConfig([
   assert.match(config, /import tseslint from 'typescript-eslint';\nimport jsdoc from 'eslint-plugin-jsdoc';\nimport codeDocs from '@qemam\/eslint-plugin-automated-code';/);
   assert.match(config, /extends: \[tseslint\.configs\.recommended\] \},\n {2}\{\n/);
   assert.match(config, /buildRules\(\) \},\n {2}\},\n\]\);\n$/);
+});
+
+test('a namespace jsdoc import gets a separate default import, never a duplicate binding', async () => {
+  const source = `import * as jsdoc from 'eslint-plugin-jsdoc';
+import tseslint from 'typescript-eslint';
+
+export default tseslint.config(
+  jsdoc.configs['flat/recommended'],
+);
+`;
+  const { read } = await runNgAdd({ '/package.json': PACKAGE_JSON, '/eslint.config.mjs': source });
+  const config = read('/eslint.config.mjs');
+  assert.match(config, /^import jsdocPlugin from 'eslint-plugin-jsdoc';$/m);
+  assert.match(config, /plugins: \{ jsdoc: jsdocPlugin, 'automated-code-docs': codeDocs \}/);
+  assertValidModule(config);
+});
+
+test('reuses a default jsdoc import that also has named imports', async () => {
+  const source = `import jsdoc, { configs } from 'eslint-plugin-jsdoc';
+import tseslint from 'typescript-eslint';
+
+export default tseslint.config(
+  configs['flat/recommended'],
+);
+`;
+  const { read } = await runNgAdd({ '/package.json': PACKAGE_JSON, '/eslint.config.mjs': source });
+  const config = read('/eslint.config.mjs');
+  assert.strictEqual(config.match(/from 'eslint-plugin-jsdoc'/g).length, 1);
+  assert.match(config, /plugins: \{ jsdoc, 'automated-code-docs': codeDocs \}/);
+  assertValidModule(config);
 });
 
 test('adds eslint-plugin-jsdoc to devDependencies, or leaves an existing version alone', async () => {

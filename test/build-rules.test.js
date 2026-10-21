@@ -96,6 +96,45 @@ test('a fully documented component is silent', () => {
   assert.deepStrictEqual(ruleIds, []);
 });
 
+test('an undocumented @Input on a setter, getter or accessor is flagged (regression: PropertyDefinition only)', () => {
+  const ruleIds = lint(`
+    ${DECORATOR_STUBS}
+    /**
+     * Renders a widget.
+     * @example <my-widget [value]="1"></my-widget>
+     * @accessibility N/A — fixture only.
+     */
+    @Component({})
+    class Widget {
+      @Input() set value(v) {}
+      @Input() get label() { return ''; }
+      @Input() accessor size = 1;
+    }
+  `);
+  assert.deepStrictEqual(ruleIds, Array(3).fill('jsdoc/require-jsdoc'));
+});
+
+test('documented setter and accessor inputs, and undecorated getters/setters, are silent', () => {
+  const ruleIds = lint(`
+    ${DECORATOR_STUBS}
+    /**
+     * Renders a widget.
+     * @example <my-widget [value]="1"></my-widget>
+     * @accessibility N/A — fixture only.
+     */
+    @Component({})
+    class Widget {
+      /** The value. */
+      @Input() set value(v) {}
+      /** The size. */
+      @Input() accessor size = 1;
+      get internal() { return 0; }
+      set internal(v) {}
+    }
+  `);
+  assert.deepStrictEqual(ruleIds, []);
+});
+
 test('the `decorators` option restricts which class decorators are checked', () => {
   const code = `
     function Directive(..._a) { return (..._b) => {}; }

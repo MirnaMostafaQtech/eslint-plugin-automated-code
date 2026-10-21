@@ -147,7 +147,7 @@ function wireEslintConfig(tree, configPath, logger) {
 
   const esm = configPath.endsWith('.mjs') || /^\s*export\s+default\b/m.test(source);
   const existingJsdoc = findImportName(source, JSDOC_PACKAGE, esm);
-  const jsdocName = existingJsdoc || 'jsdoc';
+  const jsdocName = existingJsdoc || freeName(source, 'jsdoc');
   const lines = [];
   if (!existingJsdoc) {
     lines.push(esm ? `import ${jsdocName} from '${JSDOC_PACKAGE}';` : `const ${jsdocName} = require('${JSDOC_PACKAGE}');`);
@@ -160,6 +160,8 @@ function wireEslintConfig(tree, configPath, logger) {
     '    // Automated Code Documentation: summary, @example and @accessibility on every',
     '    // @Component/@Injectable/@Directive/@Pipe, and a description on every input/output.',
     "    files: ['**/*.ts'],",
+    '    // Test host components in specs are not part of the documented API.',
+    "    ignores: ['**/*.spec.ts'],",
     `    plugins: { ${pluginEntry}, 'automated-code-docs': codeDocs },`,
     '    rules: { ...codeDocs.buildRules() },',
     '  },',
@@ -190,13 +192,30 @@ function importsPackage(source, packageName) {
   return source.includes(`'${packageName}'`) || source.includes(`"${packageName}"`);
 }
 
+// Only a default import (`import x from`, `import x, { y } from`) or a whole-module require is
+// reused, because that is the plugin object itself. Any other form (`import * as x`, a
+// destructured require) returns null, and a default import is added under a free name instead.
 function findImportName(source, packageName, esm) {
   const escaped = packageName.replace(/[.*+?^${}()|[\]\\/-]/g, '\\$&');
   const pattern = esm
-    ? new RegExp(`^import\\s+(\\w+)\\s+from\\s+['"]${escaped}['"]`, 'm')
+    ? new RegExp(`^import\\s+(\\w+)\\s*(?:,[^;]*?)?\\s+from\\s+['"]${escaped}['"]`, 'm')
     : new RegExp(`^(?:const|let|var)\\s+(\\w+)\\s*=\\s*require\\(\\s*['"]${escaped}['"]\\s*\\)`, 'm');
   const match = pattern.exec(source);
   return match ? match[1] : null;
+}
+
+// A name counts as taken if it appears anywhere in the file, comments included, so the added
+// import can never declare a binding twice (`import * as jsdoc` next to `import jsdoc`).
+function freeName(source, base) {
+  const taken = name => new RegExp(`\\b${name}\\b`).test(source);
+  if (!taken(base)) {
+    return base;
+  }
+  let suffix = 'Plugin';
+  for (let i = 2; taken(`${base}${suffix}`); i++) {
+    suffix = `Plugin${i}`;
+  }
+  return `${base}${suffix}`;
 }
 
 function appendConfigBlock(source, block) {
