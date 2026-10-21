@@ -469,7 +469,7 @@ A new project has no undocumented code, so it starts at `error` and never builds
    if ($count -gt $baseline) { Write-Error "CS1591 warnings rose from $baseline to $count"; exit 1 }
    ```
 
-## Approval and open items
+## Approval
 
 Two pilots are in place, see Status. Approval is needed to roll this out to every Angular and MVC repo.
 
@@ -477,10 +477,3 @@ Two pilots are in place, see Status. Approval is needed to roll this out to ever
 | --- | --- | --- | --- |
 | qAI.DashBoard | Angular 19 | Implemented and committed with the old name `@qemam/eslint-plugin-doc-dod` (a local, uncommitted change moves it to `@qemam/eslint-plugin-automated-code-docs`). Move it to `@qemam/eslint-plugin-automated-code` and the new folder path | 119 warnings, recorded with package 0.1.0, which did not check signal inputs. The repo uses them a lot: on the commit before the TSDoc work, package 0.2.0 reports 177 (35 classes, 3 decorator members, 56 signal members, 60 missing `@accessibility`, 23 missing `@example`). Re-measure on the current branch after moving to 0.2.0 |
 | qElite-DGA (I-line) | .NET 10 | Implemented; the wording update ("Automated Code Documentation", corrected baseline in `Docs/architecture/AutomatedCodeDocumentation.md`) is local, not checked in to TFVC yet | 3,832 `CS1591` warnings in 557 files across 13 projects (most in `qElite.Models`: 1,963). Recorded Oct 7, 2026; the 5 GIS projects in the `.sln` were not on disk, so they are not counted. Recorded before migrations and test projects were excluded (.NET step 5); measure again after adding the exclusions |
-
-**Open items**
-
-| Item | Impact | Next step |
-| --- | --- | --- |
-| The ESLint package is not published to an npm feed | `npm install` fails in CI and on every machine except the author's (repos use a `file:` path) | Create a git repo for the package and an npm feed in Azure Artifacts on `tfs25.alqemam.com`, publish it, then switch each repo to `"^0.2.0"`. It does not belong in `qMarketPlace`, which holds Claude Code plugins, not npm packages |
-| qElite-DGA baseline excludes 5 GIS projects | The real total is higher than 3,832 | Get the GIS projects, rebuild, and update the table |

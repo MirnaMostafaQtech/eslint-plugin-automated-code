@@ -87,4 +87,3 @@ ng add @qemam/eslint-plugin-automated-code
 ## ملحوظات
 
 - **.NET:** الموضوع هناك مالوش علاقة بالـ plugin. بيتعمل بـ `GenerateDocumentationFile` في `Directory.Build.props`، والكومبايلر نفسه بيطلّع warning `CS1591` على أي عنصر public مالوش `<summary>`. وده مابيفحصش accessibility خالص.
-- **أهم Open item:** الـ package لسه مش منشورة على npm feed. المشاريع بتسطّبها من path محلي، وعشان كده `npm install` بيفشل في الـ CI وعلى أي جهاز تاني غير جهاز صاحب الـ package.
