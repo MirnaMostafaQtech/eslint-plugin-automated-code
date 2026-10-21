@@ -8,6 +8,7 @@
         "save": "devDependencies"
     },
     "files": [
+        "docs",
         "lib",
         "schematics"
     ],
